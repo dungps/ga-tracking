@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GA</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body>
+  <div class="container">
+    <div class="hidden" id="loginBtn" style="width: 100%; text-align: center; height: 100vh; vertical-align: middle; padding-top: 10%;">
+      <button class="btn btn-primary" id="Login">Login With Google</button>
+    </div>
+    <div class="hidden" id="siteInfo" style="width: 100%; text-align: center; height: 100vh; vertical-align: middle; padding-top: 10%;">
+      <h1>Select a Site</h1>
+    </div>
+    <div id="pageinfo" class="hidden" style="width: 100%; height: 100vh; vertical-align: middle; padding-top: 10%;">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-3 text-center">
+            <h1 id="activeUser" style="font-size: 72px; ">0</h1>
+            <p style="font-size: 18px">Active User</p>
+          </div>
+          <div class="col-md-9">
+            <div id="source"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="http://code.jquery.com/jquery-1.12.4.min.js"></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script>
+    (function($) {
+      var api_key = ''; // insert API Key here
+      var client_id = ''; // insert Client ID here
+      var scope = 'https://www.googleapis.com/auth/analytics.readonly';
+      var currentViewID = 0;
+      function start() {
+        gapi.client.init({
+          apiKey: api_key,
+          clientId: client_id,
+          scope: scope
+        }).then(function() {
+          GoogleAuth = gapi.auth2.getAuthInstance();
+
+          GoogleAuth.isSignedIn.listen(setSigninStatus);
+
+          setSigninStatus();
+
+          $('#Login').click(function() {
+            GoogleAuth.signIn();
+          });
+
+          $('#Logout').click(function() {
+            GoogleAuth.signOut();
+          })
+
+          $(document).on('click', '.siteSelect', function(e) {
+            e.preventDefault();
+
+            $('#loginBtn').addClass('hidden');
+            $('#siteInfo').addClass('hidden');
+            $('#pageinfo').removeClass('hidden');
+
+            currentViewID = $(this).attr('data-view-id');
+
+            getData(currentViewID);
+            setInterval(function() {
+              getData(currentViewID);
+            }, 10000)
+          })
+        })
+      }
+
+      function getData( viewID ) {
+        gapi.client.request({
+          path: 'https://www.googleapis.com/analytics/v3/data/realtime',
+          method: 'GET',
+          params: {
+            ids: 'ga:' + viewID,
+            metrics: 'rt:activeUsers',
+            dimensions: 'rt:medium,rt:source'
+          }
+        }).then(function(data) {
+          var rows = [];
+          var html = '<table class="table table-striped"><tr><th>Medium</th><th>Source</th><th>Active Users</th></tr>';
+          if (data && data.result && data.result.rows && data.result.rows.length > 0) {
+            var rowsData = data.result.rows;
+            for (var i = 0; i < rowsData.length; i++) {
+              var percent = parseInt( rowsData[i][2] ) / parseInt(data.result.totalResults) * 100;
+              html += '<tr>';
+              html += '<td>'+ rowsData[i][0] +'</td>';
+              html += '<td>'+ rowsData[i][1] +'</td>';
+              html += '<td>'+ rowsData[i][2] +' ('+percent+'%)</td>';
+              html += '</tr>';
+            }
+          } else {
+            html += '<tr><td colspan="3">There is no data for this view.</td></tr>'
+          }
+          html += '</table>';
+
+          $('#source').html(html);
+          $('#activeUser').text(data.result.totalResults + "");
+        })
+      }
+
+      function setSigninStatus(isSignedIn) {
+        var user = GoogleAuth.currentUser.get();
+        var isAuthorized = user.hasGrantedScopes(scope);
+        if (isAuthorized) {
+          $('#loginBtn').addClass('hidden');
+          $('#siteInfo').removeClass('hidden');
+          getGAPage()
+          // request()
+        } else {
+          $('#loginBtn').removeClass('hidden');
+          $('#siteInfo').addClass('hidden');
+        }
+      }
+
+      function getGAPage() {
+        var user = GoogleAuth.currentUser.get();
+        gapi.client.request({
+          path: 'https://www.googleapis.com/analytics/v3/management/accounts',
+          method: 'GET'
+        }).then((data) => {
+          if (data && data.result && data.result.items && data.result.items.length > 0) {
+            var items = data.result.items;
+            for (var i = 0; i < items.length; i++) {
+              gapi.client.request({
+                path: 'https://www.googleapis.com/analytics/v3/management/accounts/'+ items[i].id +'/webproperties/~all/profiles',
+                method: 'GET'
+              }).then(function(newdata) {
+                if (newdata && newdata.result && newdata.result.items && newdata.result.items.length > 0) {
+                  var newitems = newdata.result.items;
+                  var html = '<div class="list-group">';
+                  for (var i = 0; i < newitems.length; i++) {
+                    html += '<a href="#" class="list-group-item siteSelect" data-view-id="'+ newitems[i].id +'">'+ newitems[i].name +'('+ newitems[i].websiteUrl +')</a>';
+                  }
+                  html += '</div>';
+
+                  $('#siteInfo').append(html);
+                }
+              })
+            }
+          }
+        })
+      }
+
+      gapi.load('client', start);
+    })(jQuery);
+  </script>
+</body>
+</html>
