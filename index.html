@@ -12,14 +12,14 @@
     <div class="hidden" id="siteInfo" style="width: 100%; text-align: center; height: 100vh; vertical-align: middle; padding-top: 10%;">
       <h1>Select a Site</h1>
     </div>
-    <div id="pageinfo" class="hidden" style="width: 100%; height: 100vh; vertical-align: middle; padding-top: 10%;">
+    <div id="pageinfo" class="hidden" style="width: 100%; height: 100vh; vertical-align: middle; padding-top: 5%;">
       <div class="container">
         <div class="row">
-          <div class="col-md-3 text-center">
-            <h1 id="activeUser" style="font-size: 72px; ">0</h1>
+          <div class="col-md-12 text-center">
+            <h1 id="activeUser" style="font-size: 108px; ">0</h1>
             <p style="font-size: 18px">Active User</p>
           </div>
-          <div class="col-md-9">
+          <div class="col-md-12">
             <div id="source"></div>
           </div>
         </div>
@@ -30,8 +30,8 @@
   <script src="https://apis.google.com/js/api.js"></script>
   <script>
     (function($) {
-      var api_key = ''; // insert API Key here
-      var client_id = ''; // insert Client ID here
+      var api_key = 'AIzaSyBtXilKPhJknvTLg3tHek-a1ZnOlpFz8pY'; // insert API Key here
+      var client_id = '460677455224-m5qpuk0h7477i27u3nej469vbb6iine9.apps.googleusercontent.com'; // insert Client ID here
       var scope = 'https://www.googleapis.com/auth/analytics.readonly';
       var currentViewID = 0;
       function start() {
@@ -66,7 +66,7 @@
             getData(currentViewID);
             setInterval(function() {
               getData(currentViewID);
-            }, 10000)
+            }, 40000)
           })
         })
       }
@@ -86,7 +86,7 @@
           if (data && data.result && data.result.rows && data.result.rows.length > 0) {
             var rowsData = data.result.rows;
             for (var i = 0; i < rowsData.length; i++) {
-              var percent = parseInt( rowsData[i][2] ) / parseInt(data.result.totalResults) * 100;
+              var percent = parseInt( rowsData[i][2] ) / parseInt(data.result.totalsForAllResults['rt:activeUsers']) * 100;
               html += '<tr>';
               html += '<td>'+ rowsData[i][0] +'</td>';
               html += '<td>'+ rowsData[i][1] +'</td>';
@@ -99,7 +99,7 @@
           html += '</table>';
 
           $('#source').html(html);
-          $('#activeUser').text(data.result.totalResults + "");
+          $('#activeUser').text(data.result.totalsForAllResults['rt:activeUsers']);
         })
       }
 
